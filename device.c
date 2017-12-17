@@ -161,7 +161,8 @@ void usage() {
  * @brief Avoids using ctrl-c to exit the program
  * */
 void sighandler() {
-  fprintf(stderr, "Type exit to exit!\n");
+  fprintf(stdout ,"Type exit to exit!\nHW_WAVE> ");
+  fflush(stdout); 
 }
 
 /**

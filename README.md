@@ -17,10 +17,29 @@ To compile the code, download the repository and type,
 make
 ```
 
-Three executables will be generated: `device`, `client`, `detach`
-TODO. There's two executables that should be called from two 
-terminal emulators. 
+Three executables will be generated: `device`, `run_device`, `client`. Open two 
+different consoles or tabs and run `./device <WAVE_TYPE> <PERIOD>` on one of 
+them and `./client` on the other. 
 
+### Virtual hardware:  `./device <WAVE_TYPE> <PERIOD>`
+  Input parameters:
+   * `WAVE_TYPE`: string specifying the signal type. Options: `SIN` for
+   sinusoidal, `QUA` for quadratic, `TRI` for triangular. 
+   * `PERIOD`: double specifying the period.  
+ 
+ The virtual hardware is configured to generate the signal specified by the 
+ input parameters, with a resolution of 10 bits and generating a measure 
+ every `0.1s`. The process creating the signal in a shared memory 
+ segment is sent to the background  (via `./run_device`) and a dialog 
+faking a pseudoterminal is opening and is accepting the following  *commands*:
+   * `stop`: stops the device.
+   * `start`: starts the device if on `stop` mode.
+   * `config`: lets the user reconfigure the device and restarts.
+   * `exit`: shuts down the device and removes the shared memory segment. 
+
+### Accessing shared memory:  `./client`
+  This executable monitors the device by accessing the shared memory
+  once per second. 
 
 ## Motivation and description
 
@@ -81,12 +100,65 @@ arguments. Once obtained, it can be used where required.
 
 ### Obtain shared memory identifier: `shmget()`
 
-Still TODO
+```
+#include <sys/shm.h>
+int shmget(key_t key, size_t size, int flag);
+//                        Returns: shared memory ID if OK, -1 on error
+```
+
+When a new segment is created, the following members of the 
+`shmid_ds` structure are initialized: 
+
+- `ipc_perm` structure is initialized, mode member is set to the corresponding 
+   permission bits or flag
+- `shm_lpid`, `shm_nattch`, `shm_atime`, `shm_dtime` are set to 0.
+- `shm_ctime` is set to the current time.
+- `shm_segsz` is set to the size requested. 
+
 
 ### Catchcall for various shared memory operations: `shmctl()`
 
-Still TODO
+```
+#include <sys/shm.h>
+int shmctl(int shmid, int cmd, struct shmid_ds *buf);
+//                        Returns: 0 if OK, -1 on error
+```
+
+`cmd` argument: 
+- `IPC_STAT`: fetch the `shmid_ds` structure for this segment,
+- ...
+- `IPC_RMID`: removed the shared memory segment shared from the system. 
+
+We use this function to removed the shared memory segment. From the console, 
+we can list and remove shared memory segments with the following commands, 
+
+```
+$ ipcs -ma           # list shared memory segments
+$ ipcrm -m <SHM_ID>  # removed a shared memory segment
+```
+
+
 ### Attach a process to its address:  `shmat()`
 
-Still TODO
+```
+#include <sys/shm.h>
+void * shmat(int shmid, const void *addr, int flag);
+//                        Returns: pointer to shared memory if OK, -1 on error
+```
+
+The address in the calling proess depends on the address argument and whether 
+the `SHM_RND` bit is specified in the flag. Unless we plan to run the 
+application on a single type of hardware, it is better not to specify the 
+address. If the flag `SHM_RDONLY` is specified, then it is attached as read 
+only. 
+
 ### Detach a process from its address: `shmdt()` 
+
+```
+#include <sys/shm.h>
+void * shmdt(const void *addr);
+//                        Returns: 0 if OK, -1 on error
+```
+When we are done with a shared memory segment, this function is called 
+to detach it. 
+

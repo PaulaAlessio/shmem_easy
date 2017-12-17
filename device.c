@@ -88,7 +88,7 @@ int  main(int argc, char *argv[]) {
   ShmPTR -> state = on;
   print_state(ShmPTR); 
   system("./run_device &");
-  printf("Device started . Type: {exit, start, off, config, stop} to ");
+  printf("Device started . Type: {exit, start, config, stop} to ");
   printf("act on the device\n");
   printf("HW_WAVE> ");
   char *command = calloc(CMD_LEN, 1); 
@@ -127,7 +127,7 @@ int  main(int argc, char *argv[]) {
          fgets(command, CMD_LEN, stdin);
       } else {
          printf("Unrecognized command:\n");
-         printf("Command options: {exit, start, off, config, stop}\n");
+         printf("Command options: {exit, start, config, stop}\n");
          memset(command, 0, CMD_LEN);
          printf("HW_WAVE> ");
          fgets(command, CMD_LEN, stdin);
